@@ -1,6 +1,7 @@
 #!/bin/bash
 rm -rf prebuilts/clang/host/linux-x86
 rm -rf packages/apps/GameBar
+rm -rf device/advan/X1-kernel
 
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 /opt/crave/resync.sh || repo sync
