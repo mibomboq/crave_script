@@ -13,5 +13,5 @@ export BUILD_HOSTNAME=crave
 export CUSTOM_MAINTAINER=Doo
 
 source build/envsetup.sh
-breakfast X1-user
+breakfast X1 user
 m pixelos
