@@ -9,6 +9,8 @@ git clone https://github.com/mibomboq/local_manifest.git -b master .repo/local_m
 export BUILD_USERNAME=bombo
 export BUILD_HOSTNAME=crave
 
+export CUSTOM_MAINTAINER=Doo
+
 source build/envsetup.sh
 breakfast X1 user
 m pixelos
