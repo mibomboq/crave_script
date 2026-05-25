@@ -1,5 +1,6 @@
 #!/bin/bash
 rm -rf prebuilts/clang/host/linux-x86
+rm -rf .repo/local_manifests/local_manifest.xml
 
 repo init --no-repo-verify --git-lfs -u https://github.com/Kitauji-High-School/pixelos_manifest.git -b sixteen-qpr2 -g default,-mips,-darwin,-notdefault
 git clone https://github.com/mibomboq/local_manifest.git -b master .repo/local_manifests
