@@ -14,3 +14,10 @@ export BUILD_HOSTNAME=crave
 source build/envsetup.sh
 breakfast X1 user
 m pixelos
+
+echo "Upload to gofile will be started..."
+if [ -f out/target/product/earth/*.zip ]; then
+    wget https://raw.githubusercontent.com/lordgaruda/GoFile-Upload/refs/heads/master/upload.sh
+    chmod +x upload.sh ; ./upload.sh out/target/product/X1/PixelOS_X1-*.zip
+fi
+echo "hame"
