@@ -14,6 +14,9 @@ export BUILD_HOSTNAME=crave
 
 source build/envsetup.sh
 breakfast X1 user
+
+make installclean
+
 m pixelos
 
 echo "Upload to gofile will be started..."
