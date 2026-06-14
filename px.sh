@@ -17,7 +17,7 @@ breakfast X1 user
 m pixelos
 
 echo "Upload to gofile will be started..."
-if [ -f out/target/product/X1/PixelOS_X1*.zip ]; then
+if [ -f out/target/product/X1/Pixel*X1*.zip ]; then
     wget https://raw.githubusercontent.com/lordgaruda/GoFile-Upload/refs/heads/master/upload.sh
     chmod +x upload.sh ; ./upload.sh out/target/product/X1/PixelOS_X1-16.2-*.zip
 fi
