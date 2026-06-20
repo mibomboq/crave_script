@@ -1,19 +1,37 @@
 #!/bin/bash
 
+# ==========================================
+# ⚙️ Config
+# ==========================================
 START_TIME=$(date +%s)
 LOG_FILE="build_X1_$(date +%Y%m%d_%H%M).log"
 DEVICE="X1"
 
 [ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc"
 
+# Validasi token
+if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+    echo "❌ TELEGRAM_TOKEN atau TELEGRAM_CHAT_ID unknown"
+    echo "💡 Add ~/.bashrc:"
+    echo "   export TELEGRAM_TOKEN=\"token\""
+    echo "   export TELEGRAM_CHAT_ID=\"chat_id\""
+    exit 1
+fi
+
 rm -f "/tmp/build_failed.lock"
 
+# ==========================================
+# 📝 Logging
+# ==========================================
 exec 3>&1 4>&2
 exec 1> >(tee -a "$LOG_FILE") 2>&1
 
 set -eE
 set -o pipefail
 
+# ==========================================
+# 📨 Helper Functions
+# ==========================================
 send_tg_msg() {
     curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
         -d "chat_id=${TELEGRAM_CHAT_ID}" \
@@ -44,8 +62,6 @@ handle_error() {
 
     [ -f "/tmp/build_failed.lock" ] && exit 1
     touch "/tmp/build_failed.lock"
-
-    echo "❌ Build failed on line $LINE!"
 
     local LOG_LINK=""
     if [ -f "$LOG_FILE" ]; then
@@ -78,8 +94,14 @@ handle_error() {
 
 trap 'handle_error $LINENO' ERR
 
+# ==========================================
+# 🚀 Start Notification
+# ==========================================
 send_tg_msg "BUILD STARTED ⏳%0A├─ 📱 <b>Device:</b> ${DEVICE}%0A├─ 💿 <b>ROM:</b> AxionOS%0A└─ 💻 <b>Host:</b> Crave"
 
+# ==========================================
+# 🔄 Sync
+# ==========================================
 rm -rf .repo/local_manifests
 rm -rf device/advan/X1
 rm -rf vendor/advan/X1
@@ -96,6 +118,9 @@ git clone https://github.com/mibomboq/local_manifest.git -b axion .repo/local_ma
 
 send_tg_msg "SYNC DONE ✅%0A├─ 📱 <b>Device:</b> ${DEVICE}%0A├─ ⏱️ <b>Elapsed:</b> $(get_elapsed)%0A└─ 🔨 Starting compilation..."
 
+# ==========================================
+# 🔨 Compile
+# ==========================================
 export BUILD_USERNAME=bombo
 export BUILD_HOSTNAME=crave
 
@@ -106,16 +131,13 @@ set -eE
 
 make installclean
 
-echo "=========================================="
-echo "🔨 Compiling AxionOS for $DEVICE..."
-echo "=========================================="
 ax -b
 
 ELAPSED=$(get_elapsed)
-echo "⏱️ Build done in $ELAPSED"
-echo "=========================================="
-echo "☁️ Preparing upload..."
 
+# ==========================================
+# ☁️ Upload & Notify
+# ==========================================
 if ! command -v jq &>/dev/null; then
     sudo apt-get install -y jq > /dev/null
 fi
@@ -123,32 +145,28 @@ fi
 ROM_ZIP=$(ls -t out/target/product/X1/axion-2.7*UNOFFICIAL*.zip 2>/dev/null | head -n 1 || true)
 
 if [ -z "$ROM_ZIP" ] || [ ! -f "$ROM_ZIP" ]; then
-    echo "❌ ROM zip not found!"
     handle_error $LINENO
 fi
-
-echo "✅ Found ROM: $(basename "$ROM_ZIP")"
 
 SERVER=$(curl -s https://api.gofile.io/servers | jq -r '.data.servers[0].name')
 if [ -z "$SERVER" ] || [ "$SERVER" == "null" ]; then
-    echo "❌ Failed to get Gofile server!"
     handle_error $LINENO
 fi
 
-echo "⬆️ Uploading $(basename "$ROM_ZIP") to $SERVER..."
 UPLOAD_RES=$(curl -s --retry 3 --connect-timeout 20 --max-time 1800 \
     -F "file=@${ROM_ZIP}" \
     "https://${SERVER}.gofile.io/contents/uploadfile")
 
 STATUS=$(echo "$UPLOAD_RES" | jq -r '.status')
 if [ "$STATUS" != "ok" ]; then
-    echo "❌ Upload failed!"
     handle_error $LINENO
 fi
 
 DOWNLOAD_LINK=$(echo "$UPLOAD_RES" | jq -r '.data.downloadPage')
-echo "✅ Upload done! Link: $DOWNLOAD_LINK"
 
+# ==========================================
+# 🎉 Success Notification
+# ==========================================
 exec 1>&3 2>&4
 sleep 1
 
