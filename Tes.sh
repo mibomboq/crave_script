@@ -34,10 +34,4 @@ if echo "$RESPONSE" | grep -q '"ok":true'; then
 else
     echo "❌ Gagal mengirim pesan."
     echo "Log: $RESPONSE"
-fiif echo "$RESPONSE" | grep -q '"ok":true'; then
-    echo "✅ Pesan berhasil terkirim!"
-else
-    echo "❌ Gagal mengirim pesan."
-    echo "Log error: $RESPONSE"
-fi    echo "Log error: $RESPONSE"
 fi
