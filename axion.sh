@@ -1,29 +1,19 @@
 #!/bin/bash
 
-# ==========================================
-# ⚙️ Config
-# ==========================================
 START_TIME=$(date +%s)
 LOG_FILE="build_X1_$(date +%Y%m%d_%H%M).log"
 DEVICE="X1"
 
-TELEGRAM_TOKEN="8082278726:AAGf2aFYyLPOu0K379xomfLUUJcex4uuKAo"
-TELEGRAM_CHAT_ID="-1003265091665"
+[ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc"
 
 rm -f "/tmp/build_failed.lock"
 
-# ==========================================
-# 📝 Logging
-# ==========================================
 exec 3>&1 4>&2
 exec 1> >(tee -a "$LOG_FILE") 2>&1
 
 set -eE
 set -o pipefail
 
-# ==========================================
-# 📨 Helper Functions
-# ==========================================
 send_tg_msg() {
     curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
         -d "chat_id=${TELEGRAM_CHAT_ID}" \
@@ -88,38 +78,24 @@ handle_error() {
 
 trap 'handle_error $LINENO' ERR
 
-# ==========================================
-# 🚀 Start Notification
-# ==========================================
 send_tg_msg "BUILD STARTED ⏳%0A├─ 📱 <b>Device:</b> ${DEVICE}%0A├─ 💿 <b>ROM:</b> AxionOS%0A└─ 💻 <b>Host:</b> Crave"
 
-# ==========================================
-# 🔄 Sync
-# ==========================================
-echo "=========================================="
-echo "🧹 Cleaning up old trees..."
 rm -rf .repo/local_manifests
 rm -rf device/advan/X1
 rm -rf vendor/advan/X1
 rm -rf out/target/product/X1
 
-echo "📄 Initializing repo..."
 repo init --no-repo-verify --git-lfs \
     -u https://github.com/AxionAOSP/android.git \
     -b lineage-23.2 \
     -g default,-mips,-darwin,-notdefault
 
-echo "📄 Cloning local manifests..."
 git clone https://github.com/mibomboq/local_manifest.git -b axion .repo/local_manifests
 
-echo "🔄 Syncing repos..."
 /opt/crave/resync.sh || repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune --force-sync -j$(nproc --all)
 
 send_tg_msg "SYNC DONE ✅%0A├─ 📱 <b>Device:</b> ${DEVICE}%0A├─ ⏱️ <b>Elapsed:</b> $(get_elapsed)%0A└─ 🔨 Starting compilation..."
 
-# ==========================================
-# 🔨 Compile
-# ==========================================
 export BUILD_USERNAME=bombo
 export BUILD_HOSTNAME=crave
 
@@ -137,10 +113,6 @@ ax -b
 
 ELAPSED=$(get_elapsed)
 echo "⏱️ Build done in $ELAPSED"
-
-# ==========================================
-# ☁️ Upload & Notify
-# ==========================================
 echo "=========================================="
 echo "☁️ Preparing upload..."
 
@@ -177,9 +149,6 @@ fi
 DOWNLOAD_LINK=$(echo "$UPLOAD_RES" | jq -r '.data.downloadPage')
 echo "✅ Upload done! Link: $DOWNLOAD_LINK"
 
-# ==========================================
-# 🎉 Success Notification
-# ==========================================
 exec 1>&3 2>&4
 sleep 1
 
@@ -211,5 +180,3 @@ curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
     -d "chat_id=${TELEGRAM_CHAT_ID}" \
     -d "parse_mode=HTML" \
     -d "text=${SUCCESS_MSG}" > /dev/null
-
-echo "✅ Done! Notification sent."
