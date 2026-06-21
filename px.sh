@@ -7,7 +7,7 @@ START_TIME=$(date +%s)
 LOG_FILE="build_X1_$(date +%Y%m%d_%H%M).log"
 DEVICE="X1"
 
-TELEGRAM_TOKEN="8082278726:AAGf2aFYyLPOu0K379xomfLUUJcex4uuKAo"
+TELEGRAM_TOKEN="8082278726:AAFA8kcxYYzDYRuBWJenpetLpQgyKUBlQRw"
 TELEGRAM_CHAT_ID="-1003265091665"
 
 rm -f "/tmp/build_failed.lock"
