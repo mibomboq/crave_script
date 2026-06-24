@@ -2,7 +2,6 @@
 rm -rf .repo/local_manifests
 rm -rf device/advan/X1
 rm -rf vendor/advan/X1
-rm -rf out/target/product/X1
 
 repo init --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
 git clone https://github.com/mibomboq/local_manifest.git -b los .repo/local_manifests
