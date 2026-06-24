@@ -2,7 +2,6 @@
 rm -rf .repo/local_manifests
 rm -rf device/advan/X1
 rm -rf vendor/advan/X1
-rm -rf vendor/prize/camera
 rm -rf out/target/product/X1
 
 repo init --no-repo-verify --git-lfs -u https://github.com/LineageOS/android.git -b lineage-24.0 -g default,-mips,-darwin,-notdefault
