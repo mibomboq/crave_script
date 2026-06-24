@@ -15,7 +15,7 @@ export BUILD_HOSTNAME=crave
 source build/envsetup.sh
 
 # run
-breakfast X1 user
+breakfast lineage_X1-userdebug
 
 make installclean
 m bacon
