@@ -6,7 +6,7 @@ rm -rf vendor/prize/camera
 rm -rf out/target/product/X1
 
 repo init --no-repo-verify --git-lfs -u https://github.com/Kitauji-High-School/pixelos_manifest.git -b sixteen-qpr2 -g default,-mips,-darwin,-notdefault
-git clone https://github.com/mibomboq/local_manifest.git -b master .repo/local_manifests
+git clone https://github.com/mibomboq/local_manifest.git -b Tes .repo/local_manifests
 /opt/crave/resync.sh || repo sync
 
 export BUILD_USERNAME=bombo
