@@ -3,7 +3,8 @@ rm -rf .repo/local_manifests
 rm -rf device/advan/X1
 rm -rf vendor/advan/X1
 
-repo init --no-repo-verify --git-lfs -u https://github.com/AxionAOSP/android.git -b lineage-23.2 -g default,-mips,-darwin,-notdefault
+
+repo init -u https://github.com/AxionAOSP/android.git -b lineage-23.2 --git-lfs --depth=1
 git clone https://github.com/mibomboq/local_manifest.git -b axion .repo/local_manifests
 /opt/crave/resync.sh || repo sync
 
