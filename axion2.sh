@@ -19,8 +19,8 @@ make installclean
 ax -b
 
 echo "Upload to gofile will be started..."
-if [ -f out/target/product/X1/axion-2.7-*.zip ]; then
+if [ -f out/target/product/X1/axion-2.8-*.zip ]; then
     wget https://raw.githubusercontent.com/lordgaruda/GoFile-Upload/refs/heads/master/upload.sh
-    chmod +x upload.sh ; ./upload.sh out/target/product/X1/axion-2.7-*.zip
+    chmod +x upload.sh ; ./upload.sh out/target/product/X1/axion-2.8-*.zip
 fi
 echo "finish"
