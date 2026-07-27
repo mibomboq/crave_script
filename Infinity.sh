@@ -17,8 +17,8 @@ export BUILD_HOSTNAME=kid
 
 # Apply patches
 croot && cd frameworks/base && curl https://raw.githubusercontent.com/picasso09/necessary_patching/refs/heads/main/0001-anim-override.patch | git am && cd -
-# run
 
+# run
 lunch infinity_X1-user
 
 make installclean
