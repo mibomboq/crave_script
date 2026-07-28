@@ -2,26 +2,28 @@
 rm -rf .repo/local_manifests
 rm -rf device/advan/X1
 rm -rf vendor/advan/X1
-rm -rf out/target/product/X1
+rm -rf hardware/mediatek
+rm -rf device/mediatek/sepolicy_vndr
+rm -rf kernel/advan
 
-repo init --no-repo-verify --git-lfs -u https://github.com/LineageOS/android.git -b lineage-24.0 -g default,-mips,-darwin,-notdefault
-git clone https://github.com/mibomboq/local_manifest.git -b los .repo/local_manifests
+repo init -u https://github.com/Evolution-X/manifest -b bka --git-lfs --depth=1
+git clone https://github.com/mibomboq/local_manifest.git -b main .repo/local_manifests
 /opt/crave/resync.sh || repo sync
 
-export BUILD_USERNAME=bombo
-export BUILD_HOSTNAME=crave
+export BUILD_USERNAME=random
+export BUILD_HOSTNAME=kid
 
-source build/envsetup.sh
+. build/envsetup.sh
 
 # run
-breakfast lineage_X1-userdebug
+lunch lineage_X1-bp4a-user
 
 make installclean
-m bacon
+m evolution
 
 echo "Upload to gofile will be started..."
-if [ -f out/target/product/X1/*X1*.zip ]; then
+if [ -f out/target/product/X1/EvolutionX-16.0*.zip ]; then
     wget https://raw.githubusercontent.com/lordgaruda/GoFile-Upload/refs/heads/master/upload.sh
-    chmod +x upload.sh ; ./upload.sh out/target/product/X1/*X1*.zip
+    chmod +x upload.sh ; ./upload.sh out/target/product/X1/EvolutionX-16.0*.zip
 fi
-echo "finish"
+echo "finish_bijh"
