@@ -1,6 +1,9 @@
 #!/bin/bash
 rm -rf .repo/local_manifests
+rm -rf device/advan/X1
+rm -rf device/prize
 rm -rf vendor/prize
+
 
 repo init -u https://github.com/Evolution-X/manifest -b bka --git-lfs --depth=1
 git clone https://github.com/mibomboq/local_manifest.git -b main .repo/local_manifests
@@ -12,7 +15,7 @@ export BUILD_HOSTNAME=kid
 . build/envsetup.sh
 
 # run
-lunch lineage_X1-bp4a-userdebug
+lunch lineage_X1-bp4a-user
 
 make installclean
 m evolution
