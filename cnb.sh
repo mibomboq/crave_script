@@ -16,7 +16,7 @@ export BUILD_HOSTNAME=kid
 . build/envsetup.sh
 
 # run
-lunch lineage_X1-cp2a-user
+lunch lineage_X1-cp2a-userdebug
 
 make installclean
 m evolution
