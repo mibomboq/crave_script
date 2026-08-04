@@ -7,7 +7,7 @@ rm -rf vendor/advan/X1
 
 
 repo init -u https://github.com/Evolution-X/manifest -b bka --git-lfs --depth=1
-git clone https://github.com/mibomboq/local_manifest.git -b 17 .repo/local_manifests
+git clone https://github.com/mibomboq/local_manifest.git -b main .repo/local_manifests
 /opt/crave/resync.sh || repo sync
 
 export BUILD_USERNAME=random
