@@ -13,6 +13,13 @@ git clone https://github.com/mibomboq/local_manifest.git -b main .repo/local_man
 export BUILD_USERNAME=random
 export BUILD_HOSTNAME=kid
 
+# Sign
+git clone https://github.com/Evolution-X/vendor_evolution-priv_keys-template vendor/evolution-priv/keys
+cd vendor/evolution-priv/keys
+./keys.sh
+
+cd -
+
 . build/envsetup.sh
 
 # run
@@ -26,4 +33,4 @@ if [ -f out/target/product/X1/EvolutionX-16.0*.zip ]; then
     wget https://raw.githubusercontent.com/lordgaruda/GoFile-Upload/refs/heads/master/upload.sh
     chmod +x upload.sh ; ./upload.sh out/target/product/X1/EvolutionX-16.0*.zip
 fi
-echo "finish_bijh"
+echo "finish"
