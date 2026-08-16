@@ -1,10 +1,4 @@
 #!/bin/bash
-rm -rf .repo/local_manifests
-rm -rf device/advan/X1
-rm -rf vendor/advan/X1
-rm -rf hardware/mediatek
-rm -rf device/mediatek/sepolicy_vndr
-rm -rf kernel/advan
 
 repo init -u https://github.com/Evolution-X/manifest -b cnb --git-lfs --depth=1
 git clone https://github.com/mibomboq/local_manifest.git -b 17 .repo/local_manifests
@@ -17,6 +11,9 @@ export BUILD_HOSTNAME=kid
 
 # run
 lunch lineage_X1-cp2a-userdebug
+
+# resync
+repo sync
 
 make installclean
 m evolution
