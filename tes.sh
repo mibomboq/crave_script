@@ -4,9 +4,6 @@ rm -rf device/advan/X1
 rm -rf hardware/mediatek
 rm -rf device/mediatek/sepolicy_vndr
 rm -rf vendor/advan/X1
-rm -rf device/prize
-rm -rf vendor/prize
-
 
 repo init -u https://github.com/Evolution-X/manifest -b bka --git-lfs --depth=1
 git clone https://github.com/mibomboq/local_manifest.git -b main .repo/local_manifests
