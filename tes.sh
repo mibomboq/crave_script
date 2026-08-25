@@ -1,6 +1,7 @@
 #!/bin/bash
 rm -rf .repo/local_manifests
 rm -rf device/advan/X1
+rm -rf device/advan/X1-kernel
 rm -rf hardware/mediatek
 rm -rf device/mediatek/sepolicy_vndr
 rm -rf vendor/advan/X1
