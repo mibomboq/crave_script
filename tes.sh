@@ -2,7 +2,6 @@
 rm -rf .repo/local_manifests
 rm -rf device/advan/X1
 rm -rf device/advan/X1-kernel
-rm -rf device/millennium/common-kernel
 rm -rf kernel/advan/X1
 
 repo init -u https://github.com/Evolution-X/manifest -b bka --git-lfs --depth=1
