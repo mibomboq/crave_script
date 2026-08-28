@@ -2,9 +2,7 @@
 rm -rf .repo/local_manifests
 rm -rf device/advan/X1
 rm -rf device/advan/X1-kernel
-rm -rf out/soong/.intermediates/vendor/lineage/build/soong/generated_kernel_includes
-rm -rf out/soong/.temp
-rm -rf out/soong/build.ninja
+rm -rf device/millennium/common-kernel
 
 repo init -u https://github.com/Evolution-X/manifest -b bka --git-lfs --depth=1
 git clone https://github.com/mibomboq/local_manifest.git -b main .repo/local_manifests
