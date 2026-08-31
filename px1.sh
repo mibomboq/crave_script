@@ -2,6 +2,7 @@
 rm -rf .repo/local_manifests
 rm -rf device/advan/X1
 rm -rf vendor/advan/X1
+rm -rf device/advan/X1-kernel
 
 repo init -u https://github.com/PixelOS-AOSP/android_manifest.git -b seventeen --git-lfs --depth=1
 git clone https://github.com/mibomboq/local_manifest.git -b 17 .repo/local_manifests
