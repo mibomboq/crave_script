@@ -24,8 +24,8 @@ make installclean
 m evolution
 
 echo "Upload to gofile will be started..."
-if [ -f out/target/product/X1/EvolutionX-16.0*.zip ]; then
+if [ -f out/target/product/X1/EvolutionX-16.*.zip ]; then
     wget https://raw.githubusercontent.com/lordgaruda/GoFile-Upload/refs/heads/master/upload.sh
-    chmod +x upload.sh ; ./upload.sh out/target/product/X1/EvolutionX-16.0*.zip
+    chmod +x upload.sh ; ./upload.sh out/target/product/X1/EvolutionX-16.*.zip
 fi
 echo "finish"
