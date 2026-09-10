@@ -7,6 +7,7 @@ git clone https://github.com/mibomboq/local_manifest.git -b los .repo/local_mani
 
 export BUILD_USERNAME=random
 export BUILD_HOSTNAME=kid
+export TARGET_ENABLE_FP_OVERRIDE=false
 
 # Sign
 git clone https://github.com/Evolution-X/vendor_evolution-priv_keys-template vendor/evolution-priv/keys
