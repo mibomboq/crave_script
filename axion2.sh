@@ -1,21 +1,18 @@
 #!/bin/bash
-rm -rf .repo/local_manifests
-rm -rf device/advan/X1
-rm -rf vendor/advan/X1
-rm -rf device/axion/common
-rm -rf device/mediatek/sepolicy_vndr
 
 repo init -u https://github.com/AxionAOSP/android.git -b lineage-23.2 --git-lfs --depth=1
-git clone https://github.com/mibomboq/local_manifest.git -b axion .repo/local_manifests
+git clone https://github.com/mibomboq/local_manifest.git -b los .repo/local_manifests
 /opt/crave/resync.sh || repo sync
 
 export BUILD_USERNAME=random
 export BUILD_HOSTNAME=kid
 
 . build/envsetup.sh
-axion X1 user full
 
-make installclean
+#Sigm
+gk -s
+
+axion X1 user gms
 
 ax -b
 
