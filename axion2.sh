@@ -11,12 +11,12 @@ export BUILD_HOSTNAME=kid
 
 . build/envsetup.sh
 
-#Sigm
+#Sign
 gk -s
 
 axion X1 user gms
 
-ax -b
+ax -b user
 
 echo "Upload to gofile will be started..."
 if [ -f out/target/product/X1/axion-2.8-*.zip ]; then
