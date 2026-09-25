@@ -13,10 +13,13 @@ export BUILD_HOSTNAME=kid
 
 . build/envsetup.sh
 
-#Sign
+# Sign
 gk -s
 
 axion X1 user gms
+
+# clean
+make installclean
 
 ax -b user
 
