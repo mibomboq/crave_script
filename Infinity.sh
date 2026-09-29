@@ -3,18 +3,22 @@ rm -rf .repo/local_manifests
 rm -rf device/advan
 rm -rf vendor/advan
 
-repo init --depth=1 --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 16 -g default,-mips,-darwin,-notdefault
+repo init --depth=1 --no-repo-verify --git-lfs -u https://github.com/ProjectInfinity-X/manifest -b 17 -g default,-mips,-darwin,-notdefault
 git clone https://github.com/mibomboq/local_manifest.git -b los .repo/local_manifests
 /opt/crave/resync.sh || repo sync
 
 export BUILD_USERNAME=random
 export BUILD_HOSTNAME=kid
 
+git clone https://github.com/ProjectInfinity-X/vendor_infinity-priv_keys vendor/infinity-priv/keys
+./keys.sh
+cd -
+
 . build/envsetup.sh
+
 # run
 lunch infinity_X1-user
 
-make installclean
 m bacon
 
 echo "Upload to gofile will be started..."
