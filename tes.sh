@@ -1,5 +1,6 @@
 #!/bin/bash
 rm -rf .repo/local_manifests
+rm -rf device/advan/X1
 
 repo init -u https://github.com/Lunaris-AOSP/android -b 16.2 --git-lfs --depth=1
 git clone https://github.com/mibomboq/local_manifest.git -b los .repo/local_manifests
@@ -19,6 +20,7 @@ cd -
 
 # run
 lunch lineage_X1-bp4a-user
+make installclean
 
 m bacon
 
