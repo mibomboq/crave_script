@@ -166,7 +166,7 @@ start_build_process() {
     git clone https://github.com/DooPrjkt/android_hardware_mediatek -b lineage-24.0 hardware/mediatek --depth 1
     git clone https://github.com/DooPrjkt/android_vendor_mediatek_ims vendor/mediatek/ims --depth 1
     git clone https://github.com/Tanzanite-Prjkt/android_hardware_dolby hardware/dolby --depth 1
-    git clone https://github.com/ProjectInfinity-X/vendor_infinity-priv_keys vendor/infinity-priv/keys --depth 1
+    git clone https://github.com/ProjectInfinity-X/vendor_infinity-priv_keys -b 17 vendor/infinity-priv/keys --depth 1
 
     pushd build/soong
     git fetch --unshallow
