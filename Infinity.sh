@@ -10,7 +10,7 @@ git clone https://github.com/mibomboq/local_manifest.git -b 17 .repo/local_manif
 export BUILD_USERNAME=random
 export BUILD_HOSTNAME=kid
 
-git clone https://github.com/DooPrjkt/android_6781_common.git vendor/infinity-priv/keys
+git clone https://github.com/DooPrjkt/android_6781_common.git -b 17 vendor/infinity-priv/keys
 
 . build/envsetup.sh
 
