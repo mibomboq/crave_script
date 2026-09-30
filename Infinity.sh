@@ -162,7 +162,7 @@ start_build_process() {
     git clone https://github.com/DooPrjkt/android_device_advan_X1-kernel device/advan/X1-kernel
     git clone https://github.com/DooPrjkt/android_device_mediatek_sepolicy_vndr -b lineage-24.0 device/mediatek/sepolicy_vndr --depth 1
     git clone https://github.com/DooPrjkt/android_kernel_dummy kernel/advan/X1
-    git clone https://github.com/DooPrjkt/android_vendor_advan_X1 -b lineage-24.0 vendoradvan/X1 --depth 1
+    git clone https://github.com/DooPrjkt/android_vendor_advan_X1 -b lineage-24.0 vendor/advan/X1 --depth 1
     git clone https://github.com/DooPrjkt/android_hardware_mediatek -b lineage-24.0 hardware/mediatek --depth 1
     git clone https://github.com/DooPrjkt/android_vendor_mediatek_ims vendor/mediatek/ims --depth 1
     git clone https://github.com/Tanzanite-Prjkt/android_hardware_dolby hardware/dolby --depth 1
