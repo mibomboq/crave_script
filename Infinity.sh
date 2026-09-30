@@ -174,16 +174,6 @@ start_build_process() {
     git clone https://github.com/Tanzanite-Prjkt/android_hardware_dolby hardware/dolby --depth 1
     git clone https://github.com/ProjectInfinity-X/vendor_infinity-priv_keys -b 17 vendor/infinity-priv/keys --depth 1
 
-    pushd build/soong
-    git fetch --unshallow
-    git remote add fiqri https://github.com/fiqri19102002/android_build_soong.git
-    git fetch fiqri
-    git cherry-pick e16dc96626579b49c2cced67a6b09d5b3a0290fc d6363a4b3c978824d06aebc9cb080202c7c86894
-    git remote add yaap-stone https://github.com/yaap-17-stone/build_soong.git
-    git fetch yaap-stone
-    git cherry-pick f9c27b0b9298f6eeee9a850346e0a646c3eaeb87
-    popd
-
     echo "Tree sync complete."
 
     # Setup the build environment
