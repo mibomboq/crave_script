@@ -141,7 +141,7 @@ start_build_process() {
     repo init --depth=1 -u https://github.com/ProjectInfinity-X/manifest -b 17 -g default,-mips,-darwin,-notdefault
 
 	# Clean
-    rm -rf .repo/local_manifests
+	rm -rf .repo/local_manifests
 	git -C build/soong cherry-pick --abort 2>/dev/null || true
 	
     # Resync sources
