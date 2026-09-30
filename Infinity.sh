@@ -140,8 +140,9 @@ start_build_process() {
     git config --global url."https://${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
     repo init --depth=1 -u https://github.com/ProjectInfinity-X/manifest -b 17 -g default,-mips,-darwin,-notdefault
 
-	# Clean local_manifests
+	# Clean
     rm -rf .repo/local_manifests
+	git -C build/soong cherry-pick --abort 2>/dev/null || true
 	
     # Resync sources
     /opt/crave/resync.sh
