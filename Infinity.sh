@@ -191,7 +191,7 @@ start_build_process() {
     echo "Environment setup success."
 
     # Lunch target selection
-    lunch infinity_X1-cp2a-user
+    lunch infinity_X1-user
     echo "Lunch command executed."
 
     # Build ROM
