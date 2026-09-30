@@ -140,6 +140,9 @@ start_build_process() {
     git config --global url."https://${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
     repo init --depth=1 -u https://github.com/ProjectInfinity-X/manifest -b 17 -g default,-mips,-darwin,-notdefault
 
+	# Clean local_manifests
+    rm -rf .repo/local_manifests
+	
     # Resync sources
     /opt/crave/resync.sh
     repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags --force-remove-dirty
@@ -149,9 +152,12 @@ start_build_process() {
 
     # Clean up existing trees
     echo "Starting remove repositories..."
-    rm -rf .repo/local_manifests
-    rm -rf device/advan/X1
+    rm -rf device/advan/X1 device/advan/X1-kernel
     rm -rf vendor/advan/X1
+    rm -rf kernel/advan/X1
+    rm -rf device/mediatek/sepolicy_vndr
+    rm -rf hardware/mediatek hardware/dolby
+    rm -rf vendor/mediatek/ims
     rm -rf vendor/infinity-priv/keys
     
     echo "Successfully deleted previous repositories."
