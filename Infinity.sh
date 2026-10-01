@@ -256,10 +256,6 @@ start_build_process() {
 
     repo init --depth=1 -u https://github.com/ProjectInfinity-X/manifest -b 17 -g default,-mips,-darwin,-notdefault
 
-    # Clean
-    rm -rf .repo/local_manifests
-    git -C build/soong cherry-pick --abort 2>/dev/null || true
-
     /opt/crave/resync.sh
     repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags --force-remove-dirty
     /opt/crave/resync.sh
