@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# =========================================================
+# LOAD SECRETS (TG_BOT_TOKEN, TG_BUILD_CHAT_ID, GH_TOKEN)
+# =========================================================
 if [ -f "$HOME/.secrets" ]; then
     source "$HOME/.secrets"
 else
@@ -12,14 +15,16 @@ else
     echo "File .secrets not found in $(pwd)"
 fi
 
-
 # =========================================================
 # CONFIGURATION
 # =========================================================
-# This token was retrieved from your previous log for continuous functionality.
 DEVICE_CODE="X1"
 BUILD_TARGET="Project Infinity X"
 ANDROID_VERSION="17"
+LUNCH_TARGET="infinity_X1-user"
+
+# Send progress updates every N seconds during compile (0 = off)
+HEARTBEAT_INTERVAL=3600
 
 # SHELL CONFIGURATION
 export TZ="Asia/Jakarta"
@@ -27,91 +32,218 @@ export BUILD_USERNAME=dooprjkt
 export BUILD_HOSTNAME=crave
 
 # =========================================================
-# TELEGRAM FUNCTIONS
+# HELPERS
 # =========================================================
 
-# Function to safely format and send a text message to Telegram
-send_telegram() {
-  local chat_id="$1"
-  local message="$2"
-  local _TK="$TG_BOT_TOKEN"
-
-  # 1. Escape characters required by MarkdownV2 that are NOT meant to be formatters.
-  # We use a comprehensive escaping logic to ensure *bold* text works.
-  local escaped_message=$(echo "$message" | sed \
-    -e 's/\*/\*TEMP\*/g' \
-    -e 's/_/\_TEMP\_/g' \
-    -e 's/\[/\\[/g' \
-    -e 's/\]/\\]/g' \
-    -e 's/(/\\(/g' \
-    -e 's/)/\\)/g' \
-    -e 's/~/\\~/g' \
-    -e 's/`/\`/g' \
-    -e 's/>/\\>/g' \
-    -e 's/#/\\#/g' \
-    -e 's/+/\\+/g' \
-    -e 's/-/\\-/g' \
-    -e 's/=/\\=/g' \
-    -e 's/|/\\|/g' \
-    -e 's/{/\\{/g' \
-    -e 's/}/\\}/g' \
-    -e 's/\./\\./g' \
-    -e 's/!/\\!/g')
-
-  # 2. Revert the temporary placeholders for the actual formatting characters that are intended for bold/italic.
-  local re_escaped_message=$(echo "$escaped_message" | sed \
-    -e 's/\*TEMP\*/\*/g' \
-    -e 's/\_TEMP\_/\_/g')
-  
-  # 3. URL encode special characters for transmission, including newlines.
-  local encoded_message=$(echo "$re_escaped_message" | sed \
-    -e 's/%/%25/g' \
-    -e 's/&/%26/g' \
-    -e 's/+/%2b/g' \
-    -e 's/ /%20/g' \
-    -e 's/\"/%22/g' \
-    -e 's/'"'"'/%27/g' \
-    -e 's/\n/%0A/g')
-    
-  echo -e "\n[$(date '+%Y-%m-%d %H:%M:%S')] Sending message to Telegram (${chat_id})"
-  # We must explicitly set parse_mode to MarkdownV2
-  curl -s -X POST "https://api.telegram.org/bot${_TK}/sendMessage" \
-    -d "chat_id=${chat_id}" \
-    -d "text=${encoded_message}" \
-    -d "parse_mode=MarkdownV2" \
-    -d "disable_web_page_preview=true" > /dev/null
+# Escape dynamic text to make it safe to use in parse_mode=HTML
+esc() {
+    printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
 }
 
-send_telegram_file() {
-
-  local chat_id="$1"
-  local file_path="$2"
-  local caption="$3"
-  local _TK="$TG_BOT_TOKEN"
-
-  if [ ! -f "$file_path" ]; then
-    echo "Error: File $file_path not found!"
-    return 1
-  fi
-
-  echo -e "\n[$(date '+%Y-%m-%d %H:%M:%S')] Sending document to Telegram (${chat_id})"
-
-  curl -s -X POST "https://api.telegram.org/bot${_TK}/sendDocument" \
-    -F "chat_id=${chat_id}" \
-    -F "document=@${file_path}" \
-    -F "caption=${caption}" \
-    -F "parse_mode=MarkdownV2" > /dev/null
-}
-
-# Function to format total seconds into HH:MM:SS string
-format_duration() {
+# Short duration: 1h 05m 09s / 12m 30s / 45s
+fmt_short() {
     local T=$1
     local H=$((T/3600))
     local M=$(( (T%3600)/60 ))
     local S=$((T%60))
-    printf "%02d hours, %02d minutes, %02d seconds" $H $M $S
+    if [ "$H" -gt 0 ]; then
+        printf "%dh %02dm %02ds" "$H" "$M" "$S"
+    elif [ "$M" -gt 0 ]; then
+        printf "%dm %02ds" "$M" "$S"
+    else
+        printf "%ds" "$S"
+    fi
 }
 
+# Info spek host
+host_info() {
+    local cores ram
+    cores=$(nproc --all 2>/dev/null || echo "?")
+    ram=$(free -g 2>/dev/null | awk '/^Mem:/{print $2}')
+    echo "${cores} cores, ${ram:-?} GB RAM"
+}
+
+# Last ninja progress percentage from log.txt (blank if not already there)
+build_progress() {
+    [ -f log.txt ] || return 0
+    tail -c 30000 log.txt 2>/dev/null | tr '\r' '\n' \
+        | grep -aoE '\[ *[0-9]+% [0-9]+/[0-9]+' | tail -1 | sed 's/^\[ *//'
+}
+
+# =========================================================
+# TELEGRAM FUNCTIONS (HTML mode)
+# usage: send_telegram <chat_id> <html_message> [reply_markup_json]
+# =========================================================
+send_telegram() {
+    local chat_id="$1"
+    local message="$2"
+    local markup="$3"
+    local _TK="$TG_BOT_TOKEN"
+
+    if [ -z "$_TK" ] || [ -z "$chat_id" ]; then
+        echo "Telegram skip: TG_BOT_TOKEN / TG_BUILD_CHAT_ID kosong"
+        return 0
+    fi
+
+    echo -e "\n[$(date '+%Y-%m-%d %H:%M:%S')] Sending message to Telegram (${chat_id})"
+
+    local args=(
+        --data-urlencode "chat_id=${chat_id}"
+        --data-urlencode "text=${message}"
+        --data-urlencode "parse_mode=HTML"
+        --data-urlencode "disable_web_page_preview=true"
+    )
+    [ -n "$markup" ] && args+=(--data-urlencode "reply_markup=${markup}")
+
+    local resp
+    resp=$(curl -s -X POST "https://api.telegram.org/bot${_TK}/sendMessage" "${args[@]}")
+
+    if ! echo "$resp" | grep -q '"ok":true'; then
+        echo "HTML gagal, kirim ulang sebagai plain text. Response: $resp"
+        local plain
+        plain=$(printf '%s' "$message" | sed \
+            -e 's/<[^>]*>//g' \
+            -e 's/&lt;/</g' -e 's/&gt;/>/g' -e 's/&amp;/\&/g')
+        curl -s -X POST "https://api.telegram.org/bot${_TK}/sendMessage" \
+            --data-urlencode "chat_id=${chat_id}" \
+            --data-urlencode "text=${plain}" \
+            --data-urlencode "disable_web_page_preview=true" > /dev/null
+    fi
+}
+
+# usage: send_telegram_file <chat_id> <file> [html_caption]
+send_telegram_file() {
+    local chat_id="$1"
+    local file_path="$2"
+    local caption="$3"
+    local _TK="$TG_BOT_TOKEN"
+
+    if [ -z "$_TK" ] || [ -z "$chat_id" ]; then
+        echo "Telegram skip: TG_BOT_TOKEN / TG_BUILD_CHAT_ID kosong"
+        return 0
+    fi
+
+    if [ ! -f "$file_path" ]; then
+        echo "Error: File $file_path not found!"
+        return 1
+    fi
+
+    echo -e "\n[$(date '+%Y-%m-%d %H:%M:%S')] Sending document to Telegram (${chat_id})"
+
+    curl -s -X POST "https://api.telegram.org/bot${_TK}/sendDocument" \
+        -F "chat_id=${chat_id}" \
+        -F "document=@${file_path}" \
+        -F "caption=${caption}" \
+        -F "parse_mode=HTML" > /dev/null
+}
+
+# =========================================================
+# NOTIFICATION TEMPLATES
+# =========================================================
+
+notify_start() {
+    send_telegram "$TG_BUILD_CHAT_ID" "🚀 <b>ROM Build Started</b>
+
+📦 <b>ROM:</b> $(esc "$BUILD_TARGET")
+🤖 <b>Android:</b> $(esc "$ANDROID_VERSION")
+📱 <b>Device:</b> <code>$(esc "$DEVICE_CODE")</code>
+🎯 <b>Target:</b> <code>$(esc "$LUNCH_TARGET")</code>
+🖥 <b>Host:</b> <code>$(esc "$BUILD_HOSTNAME")</code> ($(esc "$(host_info)"))
+🕒 <b>Start:</b> $(date '+%Y-%m-%d %H:%M:%S %Z')"
+}
+
+notify_progress() {
+    send_telegram "$TG_BUILD_CHAT_ID" "$1"
+}
+
+notify_final() {
+    # butuh: BUILD_STATUS START_TIME BUILD_START BUILD_END
+    # opsional: ROM_ZIP UPLOAD_LINK
+    local total=$((BUILD_END - START_TIME))
+    local sync_t=$((BUILD_START - START_TIME))
+    local build_t=$((BUILD_END - BUILD_START))
+
+    local durations="⏱ <b>Duration</b>
+├ Sync &amp; setup: $(fmt_short $sync_t)
+├ Compile: $(fmt_short $build_t)
+└ Total: $(fmt_short $total)"
+
+    local head
+    head="📦 <b>ROM:</b> $(esc "$BUILD_TARGET")
+🤖 <b>Android:</b> $(esc "$ANDROID_VERSION")
+📱 <b>Device:</b> <code>$(esc "$DEVICE_CODE")</code>
+🎯 <b>Target:</b> <code>$(esc "$LUNCH_TARGET")</code>"
+
+    if [[ $BUILD_STATUS -eq 0 ]]; then
+        local file_block=""
+        if [ -n "$ROM_ZIP" ] && [ -f "$ROM_ZIP" ]; then
+            local size sha
+            size=$(du -h "$ROM_ZIP" | cut -f1)
+            sha=$(sha256sum "$ROM_ZIP" | cut -d' ' -f1)
+            file_block="
+
+📁 <b>File:</b> <code>$(esc "$(basename "$ROM_ZIP")")</code>
+📏 <b>Size:</b> ${size}
+🔐 <b>SHA256:</b> <code>${sha}</code>"
+        fi
+
+        local link_block=""
+        local markup=""
+        if [ -n "$UPLOAD_LINK" ]; then
+            link_block="
+🔗 <b>Download:</b> $(esc "$UPLOAD_LINK")"
+            markup="{\"inline_keyboard\":[[{\"text\":\"⬇️ Download ROM\",\"url\":\"${UPLOAD_LINK}\"}]]}"
+        fi
+
+        send_telegram "$TG_BUILD_CHAT_ID" "✅ <b>Build Finished — Success</b>
+
+${head}
+
+${durations}${file_block}${link_block}
+
+🛡 <b>KernelSU-Next prebuilt</b>" "$markup"
+    else
+        local err_tail=""
+        [ -f out/error.log ] && err_tail=$(tail -n 15 out/error.log 2>/dev/null | cut -c1-200)
+        [ -z "$err_tail" ] && [ -f log.txt ] && err_tail=$(tail -n 15 log.txt 2>/dev/null | tr '\r' '\n' | tail -n 15 | cut -c1-200)
+        [ "${#err_tail}" -gt 1500 ] && err_tail=${err_tail: -1500}
+        [ -z "$err_tail" ] && err_tail="(no error output found)"
+
+        send_telegram "$TG_BUILD_CHAT_ID" "❌ <b>Build Failed</b> (exit code ${BUILD_STATUS})
+
+${head}
+
+${durations}
+
+<b>Last errors:</b>
+<pre>$(esc "$err_tail")</pre>"
+    fi
+}
+
+# ===============================================================================
+# CLONE HELPER
+# usage: clone_repo <url> <branch|""> <dest> [depth]
+# If the branch doesn't exist on the remote, fallback to the default branch.
+# ======
+clone_repo() {
+    local url="$1"
+    local branch="$2"
+    local dest="$3"
+    local depth="$4"
+    local args=()
+
+    [ -n "$depth" ] && args+=(--depth "$depth")
+
+    if [ -n "$branch" ]; then
+        if git clone "${args[@]}" -b "$branch" "$url" "$dest"; then
+            return 0
+        fi
+        echo "WARNING: branch '$branch' tidak ada untuk $dest, fallback ke default branch"
+        rm -rf "$dest"
+    fi
+
+    git clone "${args[@]}" "$url" "$dest"
+}
 
 # =========================================================
 # BUILD LOGIC FUNCTION
@@ -119,39 +251,39 @@ format_duration() {
 
 start_build_process() {
 
-    # --- STEP 1: START TIMER AND SEND INITIAL NOTIFICATION ---
     START_TIME=$(date +%s)
-
-    # Message for Build Started
-    local initial_msg="⚙️ *ROM Build Started!*
-
-    *ROM:* $BUILD_TARGET
-    *Android:* $ANDROID_VERSION
-    *Device:* $DEVICE_CODE
-    *Start Time:* $(date '+%Y-%m-%d %H:%M:%S %Z')"
-    send_telegram "$TG_BUILD_CHAT_ID" "$initial_msg"
+    notify_start
     echo "Build Started at $(date '+%Y-%m-%d %H:%M:%S')"
 
     # =========================================================
-    # ORIGINAL BUILD STEPS
+    # SYNC SOURCE
     # =========================================================
 
-    # Init Project Infinity X
-    git config --global url."https://${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+    if [ -n "${GH_TOKEN:-}" ]; then
+        git config --global url."https://${GH_TOKEN}@github.com/".insteadOf "https://github.com/"
+    else
+        echo "WARNING: GH_TOKEN is empty, private repo will fail to clone"
+    fi
+
     repo init --depth=1 -u https://github.com/ProjectInfinity-X/manifest -b 17 -g default,-mips,-darwin,-notdefault
 
-	# Clean
-	rm -rf .repo/local_manifests
-	git -C build/soong cherry-pick --abort 2>/dev/null || true
-	
-    # Resync sources
+    # Clean
+    rm -rf .repo/local_manifests
+    git -C build/soong cherry-pick --abort 2>/dev/null || true
+
     /opt/crave/resync.sh
     repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags --force-remove-dirty
     /opt/crave/resync.sh
     repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags --force-remove-dirty
     /opt/crave/resync.sh
 
-    # Clean up existing trees
+    notify_progress "🔄 <b>Source synced</b>
+⏱ Took $(fmt_short $(( $(date +%s) - START_TIME )))
+📥 Cloning device trees..."
+
+    # =========================================================
+    # CLEAN & CLONE TREES
+    # =========================================================
     echo "Starting remove repositories..."
     rm -rf device/advan/X1 device/advan/X1-kernel
     rm -rf vendor/advan/X1
@@ -160,36 +292,65 @@ start_build_process() {
     rm -rf hardware/mediatek hardware/dolby
     rm -rf vendor/mediatek/ims
     rm -rf vendor/infinity-priv/keys
-    
     echo "Successfully deleted previous repositories."
 
-    echo "Cloning device stuff..."
-    # Device Trees
-    git clone https://github.com/DooPrjkt/android_device_advan_X1 -b InfinityX-cnb device/advan/X1 --depth 1
-    git clone https://github.com/DooPrjkt/android_device_advan_X1-kernel device/advan/X1-kernel
-    git clone https://github.com/DooPrjkt/android_device_mediatek_sepolicy_vndr -b lineage-24.0 device/mediatek/sepolicy_vndr --depth 1
-    git clone https://github.com/DooPrjkt/android_kernel_dummy kernel/advan/X1
-    git clone https://github.com/DooPrjkt/android_vendor_advan_X1 -b lineage-24.0 vendor/advan/X1 --depth 1
-    git clone https://github.com/DooPrjkt/android_hardware_mediatek -b lineage-24.0 hardware/mediatek --depth 1
-    git clone https://github.com/DooPrjkt/android_vendor_mediatek_ims vendor/mediatek/ims --depth 1
-    git clone https://github.com/Tanzanite-Prjkt/android_hardware_dolby hardware/dolby --depth 1
-    git clone https://github.com/ProjectInfinity-X/vendor_infinity-priv_keys -b 17 vendor/infinity-priv/keys --depth 1
+    echo "Cloning Private Keys"
+    if [ -n "${GH_TOKEN:-}" ]; then
+        clone_repo "https://x-access-token:${GH_TOKEN}@github.com/ProjectInfinity-X/vendor_infinity-priv_keys.git" \
+            "17" vendor/infinity-priv/keys 1 \
+            || echo "WARNING: clone private keys failed"
+    else
+        echo "GH_TOKEN unknown, skip clone private keys"
+    fi
 
+    echo "Cloning device stuff..."
+    local CLONE_FAIL=0
+    clone_repo https://github.com/DooPrjkt/android_device_advan_X1               "InfinityX-cnb" device/advan/X1 1               || CLONE_FAIL=1
+    clone_repo https://github.com/DooPrjkt/android_device_advan_X1-kernel        ""              device/advan/X1-kernel ""       || CLONE_FAIL=1
+    clone_repo https://github.com/DooPrjkt/android_device_mediatek_sepolicy_vndr "lineage-24.0"  device/mediatek/sepolicy_vndr 1 || CLONE_FAIL=1
+    clone_repo https://github.com/DooPrjkt/android_kernel_dummy                  ""              kernel/advan/X1 ""              || CLONE_FAIL=1
+    clone_repo https://github.com/DooPrjkt/android_vendor_advan_X1               "lineage-24.0"  vendor/advan/X1 1               || CLONE_FAIL=1
+    clone_repo https://github.com/DooPrjkt/android_hardware_mediatek             "lineage-24.0"  hardware/mediatek 1             || CLONE_FAIL=1
+    clone_repo https://github.com/DooPrjkt/android_vendor_mediatek_ims           ""              vendor/mediatek/ims 1           || CLONE_FAIL=1
+    clone_repo https://github.com/Tanzanite-Prjkt/android_hardware_dolby         ""              hardware/dolby 1                || CLONE_FAIL=1
+
+    if [ "$CLONE_FAIL" -ne 0 ]; then
+        echo "ERROR: a tree failed to clone, build aborted."
+        notify_progress "❌ <b>Build Aborted</b>
+
+There is a tree that failed to clone, check the log."
+        return 1
+    fi
     echo "Tree sync complete."
 
-    # Setup the build environment
+    # =========================================================
+    # ENV & LUNCH
+    # =========================================================
     . build/envsetup.sh
     echo "Environment setup success."
 
-    # Lunch target selection
-    lunch infinity_X1-user
+    if ! lunch "$LUNCH_TARGET"; then
+        echo "ERROR: lunch $LUNCH_TARGET gagal, build dibatalkan."
+        notify_progress "❌ <b>Build Aborted</b>
+
+Lunch gagal untuk device <code>$(esc "$DEVICE_CODE")</code>, cek log."
+        return 1
+    fi
     echo "Lunch command executed."
 
-    # Build ROM
+    # =========================================================
+    # BUILD ROM
+    # =========================================================
     echo "========================="
     echo "Starting ROM Compilation..."
     echo "========================="
 
+    BUILD_START=$(date +%s)
+    notify_progress "🔨 <b>Compiling started</b>
+⏱ Setup took $(fmt_short $((BUILD_START - START_TIME)))
+🎯 Target: <code>$(esc "$LUNCH_TARGET")</code>"
+
+    # Monitor memori
     (
       while true; do
         echo "[memmon] === $(date +%T) ==="
@@ -200,65 +361,125 @@ start_build_process() {
       done
     ) &
     MEMMON_PID=$!
-    trap 'kill $MEMMON_PID 2>/dev/null' EXIT
+
+    # Heartbeat progres to Telegram
+    HB_PID=""
+    if [ "${HEARTBEAT_INTERVAL:-0}" -gt 0 ]; then
+        (
+          while true; do
+            sleep "$HEARTBEAT_INTERVAL"
+            local_prog=$(build_progress)
+            elapsed=$(( $(date +%s) - BUILD_START ))
+            send_telegram "$TG_BUILD_CHAT_ID" "⏳ <b>Still building...</b>
+⏱ Elapsed: $(fmt_short $elapsed)
+📊 Progress: $(esc "${local_prog:-n/a}")"
+          done
+        ) &
+        HB_PID=$!
+    fi
+
+    trap 'kill $MEMMON_PID $HB_PID 2>/dev/null' EXIT
 
     m bacon -j$(nproc --all) 2>&1 | tee log.txt
 
     BUILD_STATUS=${PIPESTATUS[0]} # Capture exit code immediately
+    BUILD_END=$(date +%s)
 
-    # --- STEP 3: CALCULATE TIME AND SEND FINAL NOTIFICATION ---
-    END_TIME=$(date +%s)
-    DURATION=$((END_TIME - START_TIME))
-    
-    local DURATION_FORMATTED=$(format_duration $DURATION)
-    
-    if [[ $BUILD_STATUS -eq 0 ]]; then
-        local status_icon="✅"
-        local status_text="Success"
-	LOG_FILE="log.txt"
-    else
-        local status_icon="❌"
-        local status_text="Failure (Exit Code: $BUILD_STATUS)"
-	LOG_FILE="out/error.log"
-    fi
+    # Force stop heartbeat
+    [ -n "$HB_PID" ] && kill "$HB_PID" 2>/dev/null
 
-    # Final Message with Android Version
-    local final_msg="${status_icon} *Build Finished!*
+    # =========================================================
+    # UPLOAD (our sukses) + NOTIF ENDS
+    # =========================================================
+    ROM_ZIP=""
+    UPLOAD_LINK=""
 
-    *ROM:* $BUILD_TARGET
-    *Android:* $ANDROID_VERSION
-    *Device:* $DEVICE_CODE
-    *Duration:* $DURATION_FORMATTED
-    *Status:* $status_text
-    *THIS ROM HAS KERNELSU-NEXT PREBUILT!*"
-    send_telegram "$TG_BUILD_CHAT_ID" "$final_msg"
-
-    if [[ -f "$LOG_FILE" ]]; then
-	send_telegram_file "$TG_BUILD_CHAT_ID" "$LOG_FILE"
-    else
-	send_telegram "$TG_BUILD_CHAT_ID" "⚠️ Warning: Log file ${LOG_FILE} not found."
-    fi
-
-    # Conditional Upload ROM
     if [[ $BUILD_STATUS -eq 0 ]]; then
         echo "Build successful. Starting upload script..."
-        # Calls the go-up script
-        rm -rf go-up*
-        wget https://raw.githubusercontent.com/nekoshirro/tools-gofile/refs/heads/private/go-up
-        chmod +x go-up
-        ./go-up out/target/product/X1/*X1*.zip
+        ROM_ZIP=$(ls -t out/target/product/${DEVICE_CODE}/*${DEVICE_CODE}*.zip 2>/dev/null | head -1)
+
+        if [ -n "$ROM_ZIP" ]; then
+            notify_progress "⬆️ <b>Uploading ROM...</b>
+📁 <code>$(esc "$(basename "$ROM_ZIP")")</code>"
+
+            rm -rf go-up*
+            wget https://raw.githubusercontent.com/nekoshirro/tools-gofile/refs/heads/private/go-up
+            chmod +x go-up
+            ./go-up "$ROM_ZIP" 2>&1 | tee go-up.log
+
+            UPLOAD_LINK=$(sed 's/\x1b\[[0-9;]*m//g' go-up.log 2>/dev/null \
+                | grep -aoE 'https?://[^ "<>]*gofile[^ "<>]*' | tail -1)
+            [ -z "$UPLOAD_LINK" ] && UPLOAD_LINK=$(sed 's/\x1b\[[0-9;]*m//g' go-up.log 2>/dev/null \
+                | grep -aoE 'https?://[^ "<>]+' | tail -1)
+        else
+            echo "WARNING: file zip ROM nggak ketemu di out/target/product/${DEVICE_CODE}/"
+        fi
     else
         echo "Build failed. Skipping upload."
     fi
 
-    # Display any error logs
-    echo "Here is your error"
-    cat out/error.log
+    notify_final
+
+    # Kirim log
+    local LOG_FILE="log.txt"
+    local LOG_CAPTION="📄 Build log"
+    if [[ $BUILD_STATUS -ne 0 ]] && [ -f out/error.log ]; then
+        LOG_FILE="out/error.log"
+        LOG_CAPTION="📄 Error log"
+    fi
+
+    if [[ -f "$LOG_FILE" ]]; then
+        send_telegram_file "$TG_BUILD_CHAT_ID" "$LOG_FILE" "$LOG_CAPTION"
+    else
+        notify_progress "⚠️ Log file <code>$(esc "$LOG_FILE")</code> not found."
+    fi
+
+    # Tampilkan error log kalau ada
+    if [ -f out/error.log ]; then
+        echo "Here is your error"
+        cat out/error.log
+    fi
+}
+
+# =========================================================
+# TEST MODE: ./infinity-x1.sh tg-test
+# =========================================================
+run_tg_test() {
+    START_TIME=$(( $(date +%s) - 5400 ))
+    BUILD_START=$(( START_TIME + 600 ))
+    BUILD_END=$(date +%s)
+
+    notify_start
+    notify_progress "🔨 <b>Compiling started</b>
+⏱ Setup took 10m 00s
+🎯 Target: <code>$(esc "$LUNCH_TARGET")</code>"
+    notify_progress "⏳ <b>Still building...</b>
+⏱ Elapsed: 1h 00m 00s
+📊 Progress: 45% 12345/27000"
+
+    local tmpzip="/tmp/tg-test-${DEVICE_CODE}.zip"
+    head -c 1048576 /dev/zero > "$tmpzip"
+
+    BUILD_STATUS=0
+    ROM_ZIP="$tmpzip"
+    UPLOAD_LINK="https://gofile.io/d/test123"
+    notify_final
+
+    BUILD_STATUS=1
+    ROM_ZIP=""
+    UPLOAD_LINK=""
+    mkdir -p /tmp/tg-test-out && printf 'error: contoh <error> & tes\nninja: build stopped\n' > /tmp/tg-test-out/error.log
+    ( cd /tmp/tg-test-out && mkdir -p out && cp error.log out/error.log && notify_final )
+
+    rm -f "$tmpzip"
+    echo "tg-test sucess, cek Telegram."
 }
 
 # =========================================================
 # MAIN EXECUTION
 # =========================================================
-
-# Check required environment variables (optional but good practice)
-start_build_process
+if [ "$1" = "tg-test" ]; then
+    run_tg_test
+else
+    start_build_process
+fi
