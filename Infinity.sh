@@ -55,14 +55,6 @@ fmt_short() {
     fi
 }
 
-# Info spek host
-host_info() {
-    local cores ram
-    cores=$(nproc --all 2>/dev/null || echo "?")
-    ram=$(free -g 2>/dev/null | awk '/^Mem:/{print $2}')
-    echo "${cores} cores, ${ram:-?} GB RAM"
-}
-
 # Last ninja progress percentage from log.txt (blank if not already there)
 build_progress() {
     [ -f log.txt ] || return 0
@@ -148,7 +140,6 @@ notify_start() {
 🤖 <b>Android:</b> $(esc "$ANDROID_VERSION")
 📱 <b>Device:</b> <code>$(esc "$DEVICE_CODE")</code>
 🎯 <b>Target:</b> <code>$(esc "$LUNCH_TARGET")</code>
-🖥 <b>Host:</b> <code>$(esc "$BUILD_HOSTNAME")</code> ($(esc "$(host_info)"))
 🕒 <b>Start:</b> $(date '+%Y-%m-%d %H:%M:%S %Z')"
 }
 
@@ -199,9 +190,7 @@ notify_final() {
 
 ${head}
 
-${durations}${file_block}${link_block}
-
-🛡 <b>KernelSU-Next prebuilt</b>" "$markup"
+${durations}${file_block}${link_block}" "$markup"
     else
         local err_tail=""
         [ -f out/error.log ] && err_tail=$(tail -n 15 out/error.log 2>/dev/null | cut -c1-200)
