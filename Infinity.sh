@@ -292,6 +292,7 @@ Failed to download the soong_build patch, check the log."
     rm -rf device/mediatek/sepolicy_vndr
     rm -rf hardware/mediatek hardware/dolby
     rm -rf vendor/mediatek/ims
+    rm -rf device/prize/camera vendor/prize/camera
     rm -rf vendor/infinity-priv/keys
     echo "Successfully deleted previous repositories."
 
@@ -314,6 +315,8 @@ Failed to download the soong_build patch, check the log."
     clone_repo https://github.com/DooPrjkt/android_hardware_mediatek             "lineage-24.0"  hardware/mediatek 1             || CLONE_FAIL=1
     clone_repo https://github.com/DooPrjkt/android_vendor_mediatek_ims           ""              vendor/mediatek/ims 1           || CLONE_FAIL=1
     clone_repo https://github.com/Tanzanite-Prjkt/android_hardware_dolby         ""              hardware/dolby 1                || CLONE_FAIL=1
+    clone_repo https://github.com/mibomboq/android_prize_pricamera.git          "17"            device/prize/camera ""          || CLONE_FAIL=1
+    clone_repo https://github.com/mibomboq/android_vendor_common_pricam.git     ""              vendor/prize/camera ""          || CLONE_FAIL=1
 
     if [ "$CLONE_FAIL" -ne 0 ]; then
         echo "ERROR: a tree failed to clone, build aborted."
@@ -380,7 +383,10 @@ Lunch failed for device <code>$(esc "$DEVICE_CODE")</code>, check the log."
     fi
 
     trap 'kill $MEMMON_PID $HB_PID 2>/dev/null' EXIT
-
+    
+   #clean
+   make installclean
+   
     m bacon -j$(nproc --all) 2>&1 | tee log.txt
 
     BUILD_STATUS=${PIPESTATUS[0]} # Capture exit code immediately
