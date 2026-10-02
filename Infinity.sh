@@ -74,7 +74,7 @@ send_telegram() {
     local _TK="$TG_BOT_TOKEN"
 
     if [ -z "$_TK" ] || [ -z "$chat_id" ]; then
-        echo "Telegram skip: TG_BOT_TOKEN / TG_BUILD_CHAT_ID kosong"
+        echo "Telegram skip: TG_BOT_TOKEN / TG_BUILD_CHAT_ID is empty"
         return 0
     fi
 
@@ -92,7 +92,7 @@ send_telegram() {
     resp=$(curl -s -X POST "https://api.telegram.org/bot${_TK}/sendMessage" "${args[@]}")
 
     if ! echo "$resp" | grep -q '"ok":true'; then
-        echo "HTML gagal, kirim ulang sebagai plain text. Response: $resp"
+        echo "HTML send failed, retrying as plain text. Response: $resp"
         local plain
         plain=$(printf '%s' "$message" | sed \
             -e 's/<[^>]*>//g' \
@@ -112,7 +112,7 @@ send_telegram_file() {
     local _TK="$TG_BOT_TOKEN"
 
     if [ -z "$_TK" ] || [ -z "$chat_id" ]; then
-        echo "Telegram skip: TG_BOT_TOKEN / TG_BUILD_CHAT_ID kosong"
+        echo "Telegram skip: TG_BOT_TOKEN / TG_BUILD_CHAT_ID is empty"
         return 0
     fi
 
@@ -149,8 +149,8 @@ notify_progress() {
 }
 
 notify_final() {
-    # butuh: BUILD_STATUS START_TIME BUILD_START BUILD_END
-    # opsional: ROM_ZIP UPLOAD_LINK
+    # needs: BUILD_STATUS START_TIME BUILD_START BUILD_END
+    # optional: ROM_ZIP UPLOAD_LINK
     local total=$((BUILD_END - START_TIME))
     local sync_t=$((BUILD_START - START_TIME))
     local build_t=$((BUILD_END - BUILD_START))
@@ -228,7 +228,7 @@ clone_repo() {
         if git clone "${args[@]}" -b "$branch" "$url" "$dest"; then
             return 0
         fi
-        echo "WARNING: branch '$branch' tidak ada untuk $dest, fallback ke default branch"
+        echo "WARNING: branch '$branch' not found for $dest, falling back to default branch"
         rm -rf "$dest"
     fi
 
@@ -262,6 +262,21 @@ start_build_process() {
     /opt/crave/resync.sh
     repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags --force-remove-dirty
     /opt/crave/resync.sh
+
+    # Patch soong_build main.go (yaap-17-stone), runs after resync
+    echo "Patching soong_build main.go..."
+    SOONG_MAIN_URL="https://github.com/yaap-17-stone/build_soong/raw/f9c27b0b9298f6eeee9a850346e0a646c3eaeb87/cmd/soong_build/main.go"
+    if wget -q -O soong_main.go.tmp "$SOONG_MAIN_URL" && [ -s soong_main.go.tmp ]; then
+        mv soong_main.go.tmp build/soong/cmd/soong_build/main.go
+        echo "soong_build main.go patched."
+    else
+        rm -f soong_main.go.tmp
+        echo "ERROR: failed to download soong_build patch, build aborted."
+        notify_progress "❌ <b>Build Aborted</b>
+
+Failed to download the soong_build patch, check the log."
+        return 1
+    fi
 
     notify_progress "🔄 <b>Source synced</b>
 ⏱ Took $(fmt_short $(( $(date +%s) - START_TIME )))
@@ -316,10 +331,10 @@ There is a tree that failed to clone, check the log."
     echo "Environment setup success."
 
     if ! lunch "$LUNCH_TARGET"; then
-        echo "ERROR: lunch $LUNCH_TARGET gagal, build dibatalkan."
+        echo "ERROR: lunch $LUNCH_TARGET failed, build aborted."
         notify_progress "❌ <b>Build Aborted</b>
 
-Lunch gagal untuk device <code>$(esc "$DEVICE_CODE")</code>, cek log."
+Lunch failed for device <code>$(esc "$DEVICE_CODE")</code>, check the log."
         return 1
     fi
     echo "Lunch command executed."
@@ -336,7 +351,7 @@ Lunch gagal untuk device <code>$(esc "$DEVICE_CODE")</code>, cek log."
 ⏱ Setup took $(fmt_short $((BUILD_START - START_TIME)))
 🎯 Target: <code>$(esc "$LUNCH_TARGET")</code>"
 
-    # Monitor memori
+    # Memory monitor
     (
       while true; do
         echo "[memmon] === $(date +%T) ==="
@@ -348,7 +363,7 @@ Lunch gagal untuk device <code>$(esc "$DEVICE_CODE")</code>, cek log."
     ) &
     MEMMON_PID=$!
 
-    # Heartbeat progres to Telegram
+    # Heartbeat progress to Telegram
     HB_PID=""
     if [ "${HEARTBEAT_INTERVAL:-0}" -gt 0 ]; then
         (
@@ -375,7 +390,7 @@ Lunch gagal untuk device <code>$(esc "$DEVICE_CODE")</code>, cek log."
     [ -n "$HB_PID" ] && kill "$HB_PID" 2>/dev/null
 
     # =========================================================
-    # UPLOAD (our sukses) + NOTIF ENDS
+    # UPLOAD (on success) + FINAL NOTIFICATION
     # =========================================================
     ROM_ZIP=""
     UPLOAD_LINK=""
@@ -398,7 +413,7 @@ Lunch gagal untuk device <code>$(esc "$DEVICE_CODE")</code>, cek log."
             [ -z "$UPLOAD_LINK" ] && UPLOAD_LINK=$(sed 's/\x1b\[[0-9;]*m//g' go-up.log 2>/dev/null \
                 | grep -aoE 'https?://[^ "<>]+' | tail -1)
         else
-            echo "WARNING: file zip ROM nggak ketemu di out/target/product/${DEVICE_CODE}/"
+            echo "WARNING: ROM zip not found in out/target/product/${DEVICE_CODE}/"
         fi
     else
         echo "Build failed. Skipping upload."
@@ -406,7 +421,7 @@ Lunch gagal untuk device <code>$(esc "$DEVICE_CODE")</code>, cek log."
 
     notify_final
 
-    # Kirim log
+    # Send log
     local LOG_FILE="log.txt"
     local LOG_CAPTION="📄 Build log"
     if [[ $BUILD_STATUS -ne 0 ]] && [ -f out/error.log ]; then
@@ -420,7 +435,7 @@ Lunch gagal untuk device <code>$(esc "$DEVICE_CODE")</code>, cek log."
         notify_progress "⚠️ Log file <code>$(esc "$LOG_FILE")</code> not found."
     fi
 
-    # Tampilkan error log kalau ada
+    # Show error log if present
     if [ -f out/error.log ]; then
         echo "Here is your error"
         cat out/error.log
@@ -454,11 +469,11 @@ run_tg_test() {
     BUILD_STATUS=1
     ROM_ZIP=""
     UPLOAD_LINK=""
-    mkdir -p /tmp/tg-test-out && printf 'error: contoh <error> & tes\nninja: build stopped\n' > /tmp/tg-test-out/error.log
+    mkdir -p /tmp/tg-test-out && printf 'error: example <error> & test\nninja: build stopped\n' > /tmp/tg-test-out/error.log
     ( cd /tmp/tg-test-out && mkdir -p out && cp error.log out/error.log && notify_final )
 
     rm -f "$tmpzip"
-    echo "tg-test sucess, cek Telegram."
+    echo "tg-test done, check Telegram."
 }
 
 # =========================================================
