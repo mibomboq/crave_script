@@ -30,6 +30,7 @@ HEARTBEAT_INTERVAL=3600
 export TZ="Asia/Jakarta"
 export BUILD_USERNAME=dooprjkt
 export BUILD_HOSTNAME=crave
+export GOMAXPROCS=16 GOMEMLIMIT=42GiB GOGC=25 MALLOC_ARENA_MAX=4
 
 # =========================================================
 # HELPERS
