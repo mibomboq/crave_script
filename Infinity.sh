@@ -236,6 +236,35 @@ clone_repo() {
 }
 
 # =========================================================
+# PATCH HELPER
+# usage: apply_patch <repo_dir> <patch_url>
+# Download patch, skip if already applied, non-fatal on failure.
+# =========================================================
+apply_patch() {
+    local dir="$1"
+    local url="$2"
+    local tmp
+    tmp="$(mktemp /tmp/patch.XXXXXX)"
+
+    if ! wget -q -O "$tmp" "$url" || [ ! -s "$tmp" ]; then
+        echo "WARNING: failed to download patch $url"
+        rm -f "$tmp"
+        return 1
+    fi
+
+    if git -C "$dir" apply --reverse --check --ignore-whitespace "$tmp" 2>/dev/null; then
+        echo "[patch] $(basename "$url") already applied, skip"
+    elif git -C "$dir" apply --ignore-whitespace "$tmp"; then
+        echo "[patch] $(basename "$url") applied to $dir"
+    else
+        echo "WARNING: $(basename "$url") failed to apply on $dir"
+        rm -f "$tmp"
+        return 1
+    fi
+    rm -f "$tmp"
+}
+
+# =========================================================
 # BUILD LOGIC FUNCTION
 # =========================================================
 
@@ -276,6 +305,15 @@ start_build_process() {
 
 Failed to download the soong_build patch, check the log."
         return 1
+    fi
+
+    # Custom patches (mibomboq/Patch, branch infinity)
+    echo "Applying custom patches..."
+    PATCH_BASE="https://raw.githubusercontent.com/mibomboq/Patch/infinity"
+    if ! apply_patch frameworks/base "$PATCH_BASE/dynamic-island-cutout-fit.patch"; then
+        notify_progress "⚠️ <b>Patch failed</b>
+
+<code>dynamic-island-cutout-fit.patch</code> was not applied, build continues without it."
     fi
 
     notify_progress "🔄 <b>Source synced</b>
