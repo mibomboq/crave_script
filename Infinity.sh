@@ -353,9 +353,7 @@ Failed to download the soong_build patch, check the log."
     clone_repo https://github.com/DooPrjkt/android_hardware_mediatek             "lineage-24.0"  hardware/mediatek 1             || CLONE_FAIL=1
     clone_repo https://github.com/DooPrjkt/android_vendor_mediatek_ims           ""              vendor/mediatek/ims 1           || CLONE_FAIL=1
     clone_repo https://github.com/Tanzanite-Prjkt/android_hardware_dolby         ""              hardware/dolby 1                || CLONE_FAIL=1
-    clone_repo https://github.com/mibomboq/android_prize_pricamera.git          "17"            device/prize/camera ""          || CLONE_FAIL=1
-    clone_repo https://github.com/mibomboq/android_vendor_common_pricam.git     ""              vendor/prize/camera ""          || CLONE_FAIL=1
-
+    
     if [ "$CLONE_FAIL" -ne 0 ]; then
         echo "ERROR: a tree failed to clone, build aborted."
         notify_progress "❌ <b>Build Aborted</b>
