@@ -307,13 +307,19 @@ Failed to download the soong_build patch, check the log."
         return 1
     fi
 
-    # Custom patches (mibomboq/Patch, branch infinity)
+    # Custom patches
     echo "Applying custom patches..."
     PATCH_BASE="https://raw.githubusercontent.com/mibomboq/Patch/infinity"
     if ! apply_patch frameworks/base "$PATCH_BASE/dynamic-island-cutout-fit.patch"; then
         notify_progress "⚠️ <b>Patch failed</b>
 
 <code>dynamic-island-cutout-fit.patch</code> was not applied, build continues without it."
+    fi
+
+    if ! apply_patch frameworks/base "$PATCH_BASE/gsa-pixel-spoof.patch"; then
+        notify_progress "⚠️ <b>Patch failed</b>
+
+<code>gsa-pixel-spoof.patch</code> was not applied, Circle to Search may not work."
     fi
 
     notify_progress "🔄 <b>Source synced</b>
