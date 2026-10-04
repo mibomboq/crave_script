@@ -338,6 +338,7 @@ Failed to download the soong_build patch, check the log."
     rm -rf vendor/mediatek/ims
     rm -rf device/prize/camera vendor/prize/camera
     rm -rf vendor/infinity-priv/keys
+    rm -rf out/target/product/X1
     echo "Successfully deleted previous repositories."
 
     echo "Cloning Private Keys"
@@ -425,9 +426,6 @@ Lunch failed for device <code>$(esc "$DEVICE_CODE")</code>, check the log."
     fi
 
     trap 'kill $MEMMON_PID $HB_PID 2>/dev/null' EXIT
-    
-   #clean
-   make installclean
    
     m bacon -j$(nproc --all) 2>&1 | tee log.txt
 
