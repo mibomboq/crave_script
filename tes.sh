@@ -1,6 +1,8 @@
 #!/bin/bash
 rm -rf .repo/local_manifests
 rm -rf device/axion/common
+rm -rf device/prize
+rm -rf vendor/prize
 
 repo init -u https://github.com/AxionAOSP/android.git -b lineage-23.2 --git-lfs --depth=1
 git clone https://github.com/mibomboq/local_manifest.git -b los .repo/local_manifests
