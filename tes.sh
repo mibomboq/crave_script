@@ -1,5 +1,6 @@
 #!/bin/bash
 rm -rf .repo/local_manifests
+rm -rf device/advan
 rm -rf device/axion/common
 rm -rf device/prize
 rm -rf vendor/prize
@@ -17,12 +18,13 @@ gk -s
 
 # run
 axion X1 gms user
+make installclean
 
 ax -b user
 
 echo "Upload to gofile will be started..."
-if [ -f out/target/product/X1/axion-2.8-*.zip ]; then
+if [ -f out/target/product/X1/axion-2.9-*.zip ]; then
     wget https://raw.githubusercontent.com/lordgaruda/GoFile-Upload/refs/heads/master/upload.sh
-    chmod +x upload.sh ; ./upload.sh out/target/product/X1/axion-2.8-*.zip
+    chmod +x upload.sh ; ./upload.sh out/target/product/X1/axion-2.9-*.zip
 fi
 echo "finish"
