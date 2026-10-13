@@ -15,6 +15,13 @@ lunch X1-cp2a-userdebug
 # resync
 repo sync
 
+# Patch soong_build main.go (yaap-17-stone), runs after resync
+wget -q -O soong.patch "https://github.com/yaap-17-stone/build_soong/commit/f9c27b0b9298f6eeee9a850346e0a646c3eaeb87.patch" \
+   && (cd build/soong && git apply --3way --include='cmd/soong_build/main.go' "$OLDPWD/soong.patch")
+rc=$?
+rm -f soong.patch
+[ $rc -eq 0 ] || return 1
+
 mka bacon
 
 echo "Upload to gofile will be started..."
