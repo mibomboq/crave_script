@@ -1,8 +1,13 @@
 #!/bin/bash
+rm -rf .repo/local_manifests
+rm -rf device/advan/X1
+rm -rf vendor/advan/X1
+rm -rf hardware/mediatek
+rm -rf vendor/gms
+rm -rf vendor/evolution-priv
 
 # Init & sync
 repo init -u https://github.com/Evolution-X/manifest -b cnb --git-lfs --depth=1
-rm -rf .repo/local_manifests
 git clone https://github.com/mibomboq/local_manifest.git -b 17 .repo/local_manifests
 /opt/crave/resync.sh || repo sync
 
