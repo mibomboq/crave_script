@@ -352,15 +352,17 @@ Failed to download the soong_build patch, check the log."
 
     echo "Cloning device stuff..."
     local CLONE_FAIL=0
+    local GH_AUTH="https://x-access-token:${GH_TOKEN}@github.com"
+
     clone_repo https://github.com/DooPrjkt/android_device_advan_X1               "InfinityX-cnb" device/advan/X1 1               || CLONE_FAIL=1
     clone_repo https://github.com/DooPrjkt/android_device_advan_X1-kernel        ""              device/advan/X1-kernel ""       || CLONE_FAIL=1
-    clone_repo https://github.com/DooPrjkt/android_device_mediatek_sepolicy_vndr "lineage-24.0"  device/mediatek/sepolicy_vndr 1 || CLONE_FAIL=1
+    clone_repo "$GH_AUTH/DooPrjkt/android_device_mediatek_sepolicy_vndr"         "lineage-24.0"  device/mediatek/sepolicy_vndr 1 || CLONE_FAIL=1
     clone_repo https://github.com/DooPrjkt/android_kernel_dummy                  ""              kernel/advan/X1 ""              || CLONE_FAIL=1
-    clone_repo https://github.com/DooPrjkt/android_vendor_advan_X1               "lineage-24.0"  vendor/advan/X1 1               || CLONE_FAIL=1
-    clone_repo https://github.com/DooPrjkt/android_hardware_mediatek             "lineage-24.0"  hardware/mediatek 1             || CLONE_FAIL=1
+    clone_repo "$GH_AUTH/DooPrjkt/android_vendor_advan_X1"                       "lineage-24.0"  vendor/advan/X1 1               || CLONE_FAIL=1
+    clone_repo "$GH_AUTH/DooPrjkt/android_hardware_mediatek"                     "lineage-24.0"  hardware/mediatek 1             || CLONE_FAIL=1
     clone_repo https://github.com/DooPrjkt/android_vendor_mediatek_ims           ""              vendor/mediatek/ims 1           || CLONE_FAIL=1
     clone_repo https://github.com/Tanzanite-Prjkt/android_hardware_dolby         ""              hardware/dolby 1                || CLONE_FAIL=1
-    
+
     if [ "$CLONE_FAIL" -ne 0 ]; then
         echo "ERROR: a tree failed to clone, build aborted."
         notify_progress "❌ <b>Build Aborted</b>
@@ -368,6 +370,11 @@ Failed to download the soong_build patch, check the log."
 There is a tree that failed to clone, check the log."
         return 1
     fi
+
+    # Strip token from remote URL of the repos cloned with GH_AUTH
+    for d in device/mediatek/sepolicy_vndr vendor/advan/X1 hardware/mediatek; do
+        git -C "$d" remote set-url origin "$(git -C "$d" remote get-url origin | sed 's#//[^@]*@#//#')"
+    done
     echo "Tree sync complete."
 
     # =========================================================
