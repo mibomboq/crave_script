@@ -361,10 +361,9 @@ Failed to download the soong_build patch, check the log."
 
     echo "Cloning Private Trees"
     if [ -n "${GH_TOKEN:-}" ]; then
-        local GH_AUTH="https://x-access-token:${GH_TOKEN}@github.com"
-        clone_repo "$GH_AUTH/DooPrjkt/android_device_mediatek_sepolicy_vndr.git" "lineage-24.0" device/mediatek/sepolicy_vndr 1 || CLONE_FAIL=1
-        clone_repo "$GH_AUTH/DooPrjkt/android_vendor_advan_X1.git"               "lineage-24.0" vendor/advan/X1 1               || CLONE_FAIL=1
-        clone_repo "$GH_AUTH/DooPrjkt/android_hardware_mediatek.git"             "lineage-24.0" hardware/mediatek 1             || CLONE_FAIL=1
+        clone_repo "https://x-access-token:${GH_TOKEN}@github.com/DooPrjkt/android_device_mediatek_sepolicy_vndr.git" "lineage-24.0" device/mediatek/sepolicy_vndr 1 || CLONE_FAIL=1
+        clone_repo "https://x-access-token:${GH_TOKEN}@github.com/DooPrjkt/android_vendor_advan_X1.git"               "lineage-24.0" vendor/advan/X1 1               || CLONE_FAIL=1
+        clone_repo "https://x-access-token:${GH_TOKEN}@github.com/DooPrjkt/android_hardware_mediatek.git"             "lineage-24.0" hardware/mediatek 1             || CLONE_FAIL=1
 
         # Strip token from remote URL
         for d in device/mediatek/sepolicy_vndr vendor/advan/X1 hardware/mediatek; do
